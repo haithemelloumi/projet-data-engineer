@@ -1,0 +1,22 @@
+
+services:
+  script-runner:
+    build: .
+    depends_on:
+      - sqlite-db
+    volumes:
+      - db-data:/data
+    environment:
+      - DB_PATH=/data/sales.db
+
+  sqlite-db:
+    image: nouchka/sqlite3:latest
+    platform: linux/amd64  # evoid warning when exectute with mac
+    stdin_open: true
+    tty: true
+    volumes:
+      - db-data:/data
+    command: tail -f /dev/null  # <- to keep it alive
+
+volumes:
+  db-data:
