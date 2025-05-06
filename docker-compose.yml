@@ -1,3 +1,4 @@
+version: '3.8'
 
 services:
   script-runner:
@@ -5,18 +6,22 @@ services:
     depends_on:
       - sqlite-db
     volumes:
-      - db-data:/data
+      - ./data:/data
+      - ./schema.sql:/app/schema.sql
+      - ./create_db.py:/app/create_db.py
+      - ./insert_data.py:/app/insert_data.py
+      - ./magasins.csv:/app/magasins.csv
+      - ./produits.csv:/app/produits.csv
+      - ./ventes.csv:/app/ventes.csv
     environment:
       - DB_PATH=/data/sales.db
+    restart: "no"  # Add this to prevent automatic restarts
 
   sqlite-db:
-    image: nouchka/sqlite3:latest
-    platform: linux/amd64  # evoid warning when exectute with mac
+    image: alpine:latest
+    platform: linux/amd64
     stdin_open: true
     tty: true
     volumes:
-      - db-data:/data
-    command: tail -f /dev/null  # <- to keep it alive
-
-volumes:
-  db-data:
+      - ./data:/data
+    command: sh -c "apk add --no-cache sqlite && tail -f /dev/null"

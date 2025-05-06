@@ -1,17 +1,13 @@
-# Dockerfile
 FROM python:3.11-slim
 
-# Create a folder in the the container
-
+# Create a folder in the container
 WORKDIR /app
 
-# Copy the folders in the the container
-COPY create_db.py .
-COPY schema.sql .
+# Install dependencies
+RUN pip install --no-cache-dir pandas
 
+# Copy necessary files
 COPY . .
 
-# Launch container
-# CMD ["python", "hello_world.py"]
-CMD ["python", "create_db.py"]
-CMD ["python", "fill_data.py"]
+# Command to run when container starts
+CMD ["sh", "-c", "python create_db.py && python insert_data.py"]

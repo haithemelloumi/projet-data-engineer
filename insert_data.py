@@ -4,7 +4,8 @@ import pandas as pd
 import uuid
 
 # Path to SQLite Database
-db_path = os.getenv("DB_PATH", "sales.db")
+db_path = os.getenv("DB_PATH", "/data/sales.db")
+print("✅ DB path used:", db_path)
 conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 
@@ -21,42 +22,44 @@ for _, row in df_magasins.iterrows():
 
 # 2. Import produits.csv
 df_produits = pd.read_csv("produits.csv")
-df_produits = df_produits[["ID Référence produit", "Nom", "Prix"]]
-df_produits.columns = ["produit_id", "nom", "prix"]
+df_produits = df_produits[["ID Référence produit", "Nom", "Prix", "Stock"]]
+df_produits.columns = ["produit_id", "nom", "prix", "stock"]
+
+print("✅ Produits :")
+print(df_produits.head())
 
 for _, row in df_produits.iterrows():
     cursor.execute("""
-        INSERT OR IGNORE INTO produits (produit_id, nom, catégorie, prix)
-        VALUES (?, ?, ?, ?)
-    """, (row["produit_id"], row["nom"], "Standard", row["prix"]))
+        INSERT OR IGNORE INTO produits (produit_id, nom, prix, stock, categorie)
+        VALUES (?, ?, ?, ?, ?)
+    """, (row["produit_id"], row["nom"], row["prix"], row["stock"], "Général"))
 
-# 3. Importer ventes.csv
+# 3. Import ventes.csv
 df_ventes = pd.read_csv("ventes.csv")
-df_ventes.columns = ["date_vente", "produit_id", "quantité", "magasin_id"]
+df_ventes.columns = ["date", "produit_id", "quantité", "magasin_id"]
 
-# Add unique ID for each sale
-for i, row in df_ventes.iterrows():
-    vente_id = str(uuid.uuid4())  # Identifiant unique
-    montant = None
+print("✅ Ventes :")
+print(df_ventes.head())
 
+for _, row in df_ventes.iterrows():
+    vente_id = str(uuid.uuid4())  # Unique ID
+    
     # Get product price
     cursor.execute("SELECT prix FROM produits WHERE produit_id = ?", (row["produit_id"],))
     result = cursor.fetchone()
-    if result:
-        montant = row["quantité"] * result[0]
+    montant = row["quantité"] * result[0] if result else 0
 
-        # Verify if the line exist (combination produit_id + date + magasin)
+    # Check if sale already exists
+    cursor.execute("""
+        SELECT 1 FROM ventes 
+        WHERE produit_id=? AND date=? AND magasin_id=?
+    """, (row["produit_id"], row["date"], row["magasin_id"]))
+    
+    if not cursor.fetchone():
         cursor.execute("""
-            SELECT 1 FROM ventes 
-            WHERE produit_id=? AND date_vente=? AND magasin_id=?
-        """, (row["produit_id"], row["date_vente"], row["magasin_id"]))
-        if cursor.fetchone():
-            continue  # skip, already added
-
-        cursor.execute("""
-            INSERT INTO ventes (vente_id, produit_id, magasin_id, date_vente, quantité, montant)
+            INSERT INTO ventes (vente_id, date, produit_id, magasin_id, quantité, montant)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (vente_id, row["produit_id"], row["magasin_id"], row["date_vente"], row["quantité"], montant))
+        """, (vente_id, row["date"], row["produit_id"], row["magasin_id"], row["quantité"], montant))
 
 # Save and close
 conn.commit()

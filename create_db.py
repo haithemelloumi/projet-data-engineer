@@ -1,23 +1,23 @@
 import os
 import sqlite3
 
-# Path of SQLite database
-db_path = os.getenv("DB_PATH", "sales.db")
+DB_PATH = '/data/sales.db'
 schema_file = "schema.sql"
 
 # Connect to database
-conn = sqlite3.connect(db_path)
+conn = sqlite3.connect(DB_PATH)
 cursor = conn.cursor()
 
-# Load SQL file
+# Drop existing tables if they exist
+cursor.execute("DROP TABLE IF EXISTS ventes")
+cursor.execute("DROP TABLE IF EXISTS produits")
+cursor.execute("DROP TABLE IF EXISTS magasins")
+
+# Load and execute schema
 with open(schema_file, "r", encoding="utf-8") as f:
-    schema_sql = f.read()
+    schema = f.read()
+    cursor.executescript(schema)
 
-# Execute SQL queries 
-cursor.executescript(schema_sql)
-
-# Save and close
 conn.commit()
 conn.close()
-
-print(f"✅ Database created with success at : {db_path}")
+print(f"✅ Database created with success")
